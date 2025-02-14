@@ -22,8 +22,9 @@ dotenv.load_dotenv()
     INITIAL_SUPPLY,
     TARGET_FDV,
     LIQUIDITY_DISTRIBUTION,
-    VESTING_SCHEDULE
-) = range(15)
+    VESTING_SCHEDULE,
+    PROJECT_ROADMAP,
+) = range(16)
 
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f'Hello {update.effective_user.first_name}')
@@ -302,12 +303,53 @@ async def handle_vesting_schedule(update: Update, context: ContextTypes.DEFAULT_
     schedule = update.message.text  # Récupérer le calendrier de vesting de l'utilisateur
     if is_valid_vesting_schedule(schedule):  # Vérifier si le calendrier de vesting est valide
         context.user_data['vesting_schedule'] = schedule  # Enregistrer le calendrier de vesting
-        return await summary(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+        return await project_roadmap(update, context)  # Appeler le résumé après avoir collecté toutes les informations
     else:
         await update.message.reply_text(
             "Invalid format. Please ensure that the vesting schedule is in the correct format."
         )
         return VESTING_SCHEDULE  # Rester dans l'état VESTING_SCHEDULE pour redemander le calendrier de vesting
+
+async def project_roadmap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "Project Roadmap & Team\n"
+        "Please outline your quarterly roadmap for the next 6-12 months. For each of the two quarters, list 2-3 key objectives in bullet points.\n\n"
+        "Example:\n"
+        "Q1:\n"
+        " • Launch the MVP (Minimum Viable Product)\n"
+        " • Acquire first 100 users\n"
+        "\n"
+        "Q2:\n"
+        " • Expand marketing efforts to increase user base by 50%\n"
+        " • Implement user feedback to improve product features"
+    )
+    return PROJECT_ROADMAP  # Return the state to wait for the user's response
+
+   
+def is_valid_roadmap(roadmap: str) -> bool:
+    """Check if the roadmap is formatted correctly for two quarters."""
+    # TODO: Implement the logic to check if the roadmap is formatted correctly for two quarters.
+    return True  # If all lines are valid
+
+async def handle_project_roadmap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    roadmap = update.message.text  # Retrieve the user's response
+    if is_valid_roadmap(roadmap):  # Check if the format is valid
+        context.user_data['project_roadmap'] = roadmap  # Store the roadmap
+        await update.message.reply_text("Thank you for providing the project roadmap! Let's summarize your project.")
+        return await summary(update, context)  # Call the summary after collecting all information
+    else:
+        await update.message.reply_text(
+            "Invalid format. Please ensure you outline your quarterly roadmap correctly."
+            "Example:\n"
+            "Q1:\n"
+            " • Launch the MVP (Minimum Viable Product)\n"
+            " • Acquire first 100 users\n"
+            "Q2:\n"
+            " • Expand marketing efforts to increase user base by 50%\n"
+            " • Implement user feedback to improve product features"
+        )
+        return PROJECT_ROADMAP  # Stay in the PROJECT_ROADMAP state to ask again
+
 
 async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_data = context.user_data
@@ -328,7 +370,8 @@ async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     summary_text += f"Target FDV: {user_data['target_fdv']}\n"
     summary_text += f"Liquidity Distribution: {user_data['liquidity_distribution']}\n"
     summary_text += f"Vesting Schedule: {user_data['vesting_schedule']}\n"
-    
+    summary_text += f"Project Roadmap: {user_data['project_roadmap']}\n"
+
     await update.message.reply_text(summary_text)
 
 def main():
@@ -354,6 +397,7 @@ def main():
             TARGET_FDV: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_target_fdv)],
             LIQUIDITY_DISTRIBUTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liquidity_distribution)],
             VESTING_SCHEDULE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_vesting_schedule)],
+            PROJECT_ROADMAP: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_project_roadmap)],
         },
         fallbacks=[],
     )
