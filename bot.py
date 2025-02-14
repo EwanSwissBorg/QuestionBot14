@@ -21,7 +21,8 @@ dotenv.load_dotenv()
     TOTAL_SUPPLY,
     INITIAL_SUPPLY,
     TARGET_FDV,
-) = range(13)
+    LIQUIDITY_DISTRIBUTION
+) = range(14)
 
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f'Hello {update.effective_user.first_name}')
@@ -210,13 +211,56 @@ async def handle_target_fdv(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     fdv = update.message.text  # Récupérer le FDV de l'utilisateur
     if is_valid_target_fdv(fdv):  # Vérifier si le FDV est valide
         context.user_data['target_fdv'] = fdv  # Enregistrer le FDV
-        return await summary(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+        return await liquidity_distribution(update, context)  # Appeler le résumé après avoir collecté toutes les informations
     else:
         await update.message.reply_text(
             "Invalid target FDV format. Please try again.\n"
             "Format: chiffres\n"
         )
         return TARGET_FDV  # Rester dans l'état TARGET_FDV pour redemander le FDV
+
+async def liquidity_distribution(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "Please list each category with its percentage using this format: \"XX% - Category Name\".\n"
+        "Don't forget to include the percent for your initial liquidity pool that will be burned!\n\n"
+        "Example:\n"
+        "15% - Team\n"
+        "69% - Community\n"
+        "1% - Advisors & Angels\n"
+        "10% - Marketing\n"
+        "5% - LBP\n\n"
+        "Total need to be: 100%"
+    )
+    return LIQUIDITY_DISTRIBUTION  # Retourner l'état pour attendre la réponse de l'utilisateur
+
+
+def is_valid_distribution(distribution: str) -> bool:
+    """Vérifie si la distribution est valide et totalise 100%."""
+    lines = distribution.strip().split('\n')
+    total_percentage = 0
+    for line in lines:
+        parts = line.split('-')
+        if len(parts) != 2:
+            return False  # Format incorrect
+        try:
+            percentage = int(parts[0].strip().replace('%', ''))
+            total_percentage += percentage
+        except ValueError:
+            return False  # Non numérique
+    return total_percentage == 100  # Vérifier si le total est 100%
+
+
+async def handle_liquidity_distribution(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    distribution = update.message.text  # Récupérer la réponse de l'utilisateur
+    if is_valid_distribution(distribution):  # Vérifier si le format est valide
+        context.user_data['liquidity_distribution'] = distribution  # Enregistrer la distribution
+        await update.message.reply_text("Thank you for providing the liquidity distribution details! Let's summarize your project.")
+        return await summary(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+    else:
+        await update.message.reply_text(
+            "Invalid format. Please ensure that the total percentage is 100% and follow the format: \"XX% - Category Name\"."
+        )
+        return LIQUIDITY_DISTRIBUTION  # Rester dans l'état LIQUIDITY_DISTRIBUTION pour redemander la distribution
 
 
 async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -236,7 +280,7 @@ async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     summary_text += f"Total Supply: {user_data['total_supply']}\n"
     summary_text += f"Initial Supply: {user_data['initial_supply']}\n"
     summary_text += f"Target FDV: {user_data['target_fdv']}\n"
-    
+    summary_text += f"Liquidity Distribution: {user_data['liquidity_distribution']}\n"
     
     await update.message.reply_text(summary_text)
 
@@ -261,6 +305,7 @@ def main():
             TOTAL_SUPPLY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_total_supply)],
             INITIAL_SUPPLY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_initial_supply)],
             TARGET_FDV: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_target_fdv)],
+            LIQUIDITY_DISTRIBUTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liquidity_distribution)],
         },
         fallbacks=[],
     )
