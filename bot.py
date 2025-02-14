@@ -24,7 +24,9 @@ dotenv.load_dotenv()
     LIQUIDITY_DISTRIBUTION,
     VESTING_SCHEDULE,
     PROJECT_ROADMAP,
-) = range(16)
+    TEAM_INFORMATION,
+    ESSENTIAL_LINKS,
+) = range(18)
 
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f'Hello {update.effective_user.first_name}')
@@ -336,7 +338,7 @@ async def handle_project_roadmap(update: Update, context: ContextTypes.DEFAULT_T
     if is_valid_roadmap(roadmap):  # Check if the format is valid
         context.user_data['project_roadmap'] = roadmap  # Store the roadmap
         await update.message.reply_text("Thank you for providing the project roadmap! Let's summarize your project.")
-        return await summary(update, context)  # Call the summary after collecting all information
+        return await team_information(update, context)  # Call the summary after collecting all information
     else:
         await update.message.reply_text(
             "Invalid format. Please ensure you outline your quarterly roadmap correctly."
@@ -349,6 +351,74 @@ async def handle_project_roadmap(update: Update, context: ContextTypes.DEFAULT_T
             " • Implement user feedback to improve product features"
         )
         return PROJECT_ROADMAP  # Stay in the PROJECT_ROADMAP state to ask again
+
+async def team_information(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "Team Information\n"
+        "For each key team member, provide:\n"
+        " • Name and position\n"
+        " • LinkedIn link (if available)\n"
+        " • X/Twitter link (if available)\n\n"
+        "Example:\n"
+        "1. John Doe - CEO\n"
+        "   LinkedIn: https://linkedin.com/in/johndoe\n"
+        "   Twitter: https://twitter.com/johndoe\n\n"
+        "2. Jane Smith - CTO\n"
+        "   LinkedIn: https://linkedin.com/in/janesmith\n"
+        "   Twitter: https://twitter.com/janesmith"
+    )
+    return TEAM_INFORMATION  # Return the state to wait for the user's response
+
+def is_valid_team_info(team_info: str) -> bool:
+    """Check if the team information is formatted correctly."""
+    # TODO: Implement the logic to check if the team information is formatted correctly.
+    return True  # If all lines are valid
+
+async def handle_team_information(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    team_info = update.message.text  # Retrieve the user's response
+    if is_valid_team_info(team_info):  # Check if the format is valid
+        context.user_data['team_information'] = team_info  # Store the team information
+        await update.message.reply_text("Thank you for providing the team information! Now let's move on to essential links.")
+        return await essential_links(update, context)  # Call the essential links function
+    else:
+        await update.message.reply_text(
+            "Invalid format. Please ensure you provide the team information correctly."
+        )
+        return TEAM_INFORMATION  # Stay in the TEAM_INFORMATION state to ask again
+
+async def essential_links(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "Essential Links\n"
+        "Please provide the following links:\n"
+        " • Pitch deck URL 📑\n"
+        " • Community chat (Telegram/Discord) 💬\n"
+        " • Website URL 🌐\n\n"
+        "If you want to add another important link, add:\n"
+        "- Name_Link link\n\n"
+        "Example:\n"
+        " • Pitch deck: https://example.com/pitchdeck\n"
+        " • Community chat: https://t.me/examplechat\n"
+        " • Website: https://example.com\n"
+        " • Important Link: GitHub: https://github.com/example"
+    )
+    return ESSENTIAL_LINKS  # Return the state to wait for the user's response
+
+def is_valid_essential_links(links: str) -> bool:
+    """Check if the essential links are formatted correctly."""
+    # TODO: Implement the logic to check if the essential links are formatted correctly.
+    return True  # If all lines are valid
+
+async def handle_essential_links(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    links = update.message.text  # Retrieve the user's response
+    if is_valid_essential_links(links):  # Check if the format is valid
+        context.user_data['essential_links'] = links  # Store the essential links
+        await update.message.reply_text("Thank you for providing the essential links! Let's summarize your project.")
+        return await summary(update, context)  # Call the summary after collecting all information
+    else:
+        await update.message.reply_text(
+            "Invalid format. Please ensure you provide the essential links correctly."
+        )
+        return ESSENTIAL_LINKS  # Stay in the ESSENTIAL_LINKS state to ask again
 
 
 async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -371,6 +441,8 @@ async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     summary_text += f"Liquidity Distribution: {user_data['liquidity_distribution']}\n"
     summary_text += f"Vesting Schedule: {user_data['vesting_schedule']}\n"
     summary_text += f"Project Roadmap: {user_data['project_roadmap']}\n"
+    summary_text += f"Team Information: {user_data['team_information']}\n"
+    summary_text += f"Essential Links: {user_data['essential_links']}\n"
 
     await update.message.reply_text(summary_text)
 
@@ -398,6 +470,8 @@ def main():
             LIQUIDITY_DISTRIBUTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liquidity_distribution)],
             VESTING_SCHEDULE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_vesting_schedule)],
             PROJECT_ROADMAP: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_project_roadmap)],
+            TEAM_INFORMATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_team_information)],
+            ESSENTIAL_LINKS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_essential_links)],
         },
         fallbacks=[],
     )
