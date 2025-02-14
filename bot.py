@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 import dotenv
 import os   
+import re  # Assurez-vous d'importer le module re pour les expressions régulières
 
 dotenv.load_dotenv()
 
@@ -34,13 +35,30 @@ async def handle_project_name(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def token_ticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
-        "What is the ticker of the token you're raising funds for? 💰"
+        "What's your token ticker? Format: $XXXXX (maximum 5 long)\n"
+        " • Examples: $BTC, $SOL, $MATES\n"
+        " • Note: Only UPPERCASE letters A-Z are allowed after the $ symbol"
     )
     return TOKEN_TICKER  # Retourner l'état pour attendre la réponse de l'utilisateur
 
+def is_valid_ticker(ticker: str) -> bool:
+    """Vérifie si le ticker est valide selon les critères spécifiés."""
+    pattern = r'^\$[A-Z]{1,5}$'  # Format: $XXXXX avec 1 à 5 lettres majuscules
+    return re.match(pattern, ticker) is not None
+
 async def handle_token_ticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    context.user_data['token_ticker'] = update.message.text  # Enregistrer le ticker du token
-    return await summary(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+    ticker = update.message.text  # Récupérer le ticker de l'utilisateur
+    if is_valid_ticker(ticker):  # Vérifier si le ticker est valide
+        context.user_data['token_ticker'] = ticker  # Enregistrer le ticker du token
+        return await summary(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+    else:
+        await update.message.reply_text(
+            "Invalid ticker format. Please try again.\n"
+            "Format: $XXXXX (maximum 5 long)\n"
+            " • Examples: $BTC, $SOL, $MATES\n"
+            " • Note: Only UPPERCASE letters A-Z are allowed after the $ symbol"
+        )
+        return TOKEN_TICKER  # Rester dans l'état TOKEN_TICKER pour redemander le ticker
 
 async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Display a summary of all collected information"""
