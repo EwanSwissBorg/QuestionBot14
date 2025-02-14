@@ -21,18 +21,24 @@ dotenv.load_dotenv()
     TOTAL_SUPPLY,
     INITIAL_SUPPLY,
     TARGET_FDV,
-    LIQUIDITY_DISTRIBUTION
-) = range(14)
+    LIQUIDITY_DISTRIBUTION,
+    VESTING_SCHEDULE
+) = range(15)
 
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f'Hello {update.effective_user.first_name}')
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text(
-        "Gm! I'm the BorgPad Curator Bot. I'll help you create a professional data room "
-        "for your project. I'll ask you a series of questions to gather all the necessary "
-        "information. Let's start with your basic Project Information.\n\n"
-    )
+    if update.message:  # Check if update.message is not None
+        await update.message.reply_text(
+            "Gm! I'm the BorgPad Curator Bot. I'll help you create a professional data room "
+            "for your project. I'll ask you a series of questions to gather all the necessary "
+            "information. Let's start with your basic Project Information.\n\n"
+        )
+    else:
+        # Handle the case where update.message is None
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Gm! I'm the BorgPad Curator Bot. I'll help you create a professional data room for your project. Let's start with your basic Project Information.")
+    
     return await project_name(update, context)
 
 async def project_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -255,13 +261,53 @@ async def handle_liquidity_distribution(update: Update, context: ContextTypes.DE
     if is_valid_distribution(distribution):  # Vérifier si le format est valide
         context.user_data['liquidity_distribution'] = distribution  # Enregistrer la distribution
         await update.message.reply_text("Thank you for providing the liquidity distribution details! Let's summarize your project.")
-        return await summary(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+        return await vesting_schedule(update, context)  # Appeler le résumé après avoir collecté toutes les informations
     else:
         await update.message.reply_text(
             "Invalid format. Please ensure that the total percentage is 100% and follow the format: \"XX% - Category Name\"."
         )
         return LIQUIDITY_DISTRIBUTION  # Rester dans l'état LIQUIDITY_DISTRIBUTION pour redemander la distribution
 
+async def vesting_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "Vesting Schedule\n"
+        "For each category above, specify:\n"
+        " • Cliff period (locked period before first unlock)\n"
+        " • Initial unlock percentage (TGE unlock)\n"
+        " • Vesting duration and details\n\n"
+        "Example:\n"
+        "Team (20%):\n"
+        " • - 3 month cliff\n"
+        " • - No initial unlock\n"
+        " • - 12 months linear vesting\n\n"
+        "Community (69%):\n"
+        " • - 0 cliff\n"
+        " • - 10% unlock at TGE\n"
+        " • - 6 months linear vesting\n\n"
+        "Let's start with the categories you provided earlier."
+    )
+    return VESTING_SCHEDULE  # Retourner l'état pour attendre la réponse de l'utilisateur
+
+def is_valid_vesting_schedule(schedule: str) -> bool:
+    """Vérifie si le calendrier de vesting est au format correct."""
+    lines = schedule.strip().split('\n')
+    if len(lines) < 3:  # S'assurer qu'il y a au moins 3 lignes
+        return False
+    for line in lines:
+        if not line.strip():  # Vérifier les lignes vides
+            return False
+    return True  # Si toutes les lignes sont valides
+
+async def handle_vesting_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    schedule = update.message.text  # Récupérer le calendrier de vesting de l'utilisateur
+    if is_valid_vesting_schedule(schedule):  # Vérifier si le calendrier de vesting est valide
+        context.user_data['vesting_schedule'] = schedule  # Enregistrer le calendrier de vesting
+        return await summary(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+    else:
+        await update.message.reply_text(
+            "Invalid format. Please ensure that the vesting schedule is in the correct format."
+        )
+        return VESTING_SCHEDULE  # Rester dans l'état VESTING_SCHEDULE pour redemander le calendrier de vesting
 
 async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_data = context.user_data
@@ -281,6 +327,7 @@ async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     summary_text += f"Initial Supply: {user_data['initial_supply']}\n"
     summary_text += f"Target FDV: {user_data['target_fdv']}\n"
     summary_text += f"Liquidity Distribution: {user_data['liquidity_distribution']}\n"
+    summary_text += f"Vesting Schedule: {user_data['vesting_schedule']}\n"
     
     await update.message.reply_text(summary_text)
 
@@ -306,6 +353,7 @@ def main():
             INITIAL_SUPPLY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_initial_supply)],
             TARGET_FDV: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_target_fdv)],
             LIQUIDITY_DISTRIBUTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_liquidity_distribution)],
+            VESTING_SCHEDULE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_vesting_schedule)],
         },
         fallbacks=[],
     )
