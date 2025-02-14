@@ -18,7 +18,10 @@ dotenv.load_dotenv()
     GROWTH_STRATEGY,
     COMPETITORS,
     KEY_DIFFERENTIATORS,
-) = range(10)
+    TOTAL_SUPPLY,
+    INITIAL_SUPPLY,
+    TARGET_FDV,
+) = range(13)
 
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f'Hello {update.effective_user.first_name}')
@@ -146,46 +149,94 @@ async def key_differentiators(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def handle_key_differentiators(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['key_differentiators'] = update.message.text
-    return await summary(update, context)
+    return await total_supply(update, context)
+
+async def total_supply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "What's your total supply? 💰"
+    )
+    return TOTAL_SUPPLY
+
+def is_valid_supply(supply: str) -> bool:
+    """Vérifie si la supply est un chiffre"""
+    return supply.isdigit()
+
+async def handle_total_supply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    supply = update.message.text  # Récupérer la supply de l'utilisateur
+    if is_valid_supply(supply):  # Vérifier si la supply est valide
+        context.user_data['total_supply'] = supply  # Enregistrer la supply
+        return await initial_supply(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+    else:
+        await update.message.reply_text(
+            "Invalid supply format. Please try again.\n"
+            "Format: chiffres\n"
+        )
+        return TOTAL_SUPPLY  # Rester dans l'état TOTAL_SUPPLY pour redemander la supply
+
+async def initial_supply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "What's your initial supply? 💰"
+    )
+    return INITIAL_SUPPLY
+
+def is_valid_initial_supply(supply: str, total_supply: str) -> bool:
+    """Vérifie si la supply initiale est un chiffre inférieur à la supply totale"""
+    return supply.isdigit() and int(supply) < int(total_supply)
+
+async def handle_initial_supply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    supply = update.message.text  # Récupérer la supply initiale de l'utilisateur
+    if is_valid_initial_supply(supply, context.user_data['total_supply']):  # Vérifier si la supply initiale est valide
+        context.user_data['initial_supply'] = supply  # Enregistrer la supply initiale
+        return await target_fdv(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+    else:
+        await update.message.reply_text(
+            "Invalid initial supply format. Please try again.\n"
+            "Format: chiffres\n"
+            "Initial supply must be less than total supply\n"
+        )
+        return INITIAL_SUPPLY  # Rester dans l'état INITIAL_SUPPLY pour redemander la supply initiale
+
+async def target_fdv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "What's your target FDV? 💰"
+    )
+    return TARGET_FDV
+
+def is_valid_target_fdv(fdv: str) -> bool:
+    """Vérifie si le FDV est un chiffre"""
+    return fdv.isdigit()    
+
+async def handle_target_fdv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    fdv = update.message.text  # Récupérer le FDV de l'utilisateur
+    if is_valid_target_fdv(fdv):  # Vérifier si le FDV est valide
+        context.user_data['target_fdv'] = fdv  # Enregistrer le FDV
+        return await summary(update, context)  # Appeler le résumé après avoir collecté toutes les informations
+    else:
+        await update.message.reply_text(
+            "Invalid target FDV format. Please try again.\n"
+            "Format: chiffres\n"
+        )
+        return TARGET_FDV  # Rester dans l'état TARGET_FDV pour redemander le FDV
+
 
 async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Display a summary of all collected information"""
     user_data = context.user_data
-    
     summary_text = "📋 Project Summary:\n\n"
     
-    if 'project_name' in user_data:
-        summary_text += f"🏷️ Project Name: {user_data['project_name']}\n"
+    summary_text += f"Project Name: {user_data['project_name']}\n"
+    summary_text += f"Token Ticker: {user_data['token_ticker']}\n"
+    summary_text += f"Project Description: {user_data['project_description']}\n"
+    summary_text += f"Main Problem: {user_data['main_problem']}\n"
+    summary_text += f"Solution: {user_data['solution']}\n"
+    summary_text += f"Technology Work: {user_data['technology_work']}\n"
+    summary_text += f"Target Market: {user_data['target_market']}\n"
+    summary_text += f"Growth Strategy: {user_data['growth_strategy']}\n"
+    summary_text += f"Competitors: {user_data['competitors']}\n"
+    summary_text += f"Key Differentiators: {user_data['key_differentiators']}\n"
+    summary_text += f"Total Supply: {user_data['total_supply']}\n"
+    summary_text += f"Initial Supply: {user_data['initial_supply']}\n"
+    summary_text += f"Target FDV: {user_data['target_fdv']}\n"
     
-    if 'token_ticker' in user_data:
-        summary_text += f"💰 Token Ticker: {user_data['token_ticker']}\n"
-    
-    if 'project_description' in user_data:
-        summary_text += f"📝 Project Description: {user_data['project_description']}\n"
-    
-    if 'main_problem' in user_data:
-        summary_text += f"🤔 Main Problem: {user_data['main_problem']}\n"
-    
-    if 'solution' in user_data:
-        summary_text += f"💡 Solution: {user_data['solution']}\n"
-    
-    if 'technology_work' in user_data:
-        summary_text += f"💻 Technology Work: {user_data['technology_work']}\n"
-    
-    if 'target_market' in user_data:
-        summary_text += f"🎯 Target Market: {user_data['target_market']}\n"
-    
-    if 'growth_strategy' in user_data:
-        summary_text += f"🚀 Growth Strategy: {user_data['growth_strategy']}\n"
-    
-    if 'competitors' in user_data:
-        summary_text += f"🤖 Competitors: {user_data['competitors']}\n"
-    
-    if 'key_differentiators' in user_data:
-        summary_text += f"🔑 Key Differentiators: {user_data['key_differentiators']}\n"
-    
-    if not any(key in user_data for key in ['project_name', 'token_ticker']):
-        summary_text = "No information collected yet. Please start the conversation with /start"
     
     await update.message.reply_text(summary_text)
 
@@ -207,6 +258,9 @@ def main():
             GROWTH_STRATEGY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_growth_strategy)],
             COMPETITORS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_competitors)],
             KEY_DIFFERENTIATORS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_key_differentiators)],
+            TOTAL_SUPPLY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_total_supply)],
+            INITIAL_SUPPLY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_initial_supply)],
+            TARGET_FDV: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_target_fdv)],
         },
         fallbacks=[],
     )
